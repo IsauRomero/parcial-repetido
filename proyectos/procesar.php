@@ -1,61 +1,73 @@
 <?php
 
-$cursos = require __DIR__ . "/datos.php";
+session_start();
 
+$cursos = require __DIR__ . "/datos.php";
 require_once __DIR__ . "/funciones.php";
+
+
+// ==========================================
+// CREAR SESION DE PARTICIPANTES
+// ==========================================
+
+if (!isset($_SESSION["participantes"])) {
+    $_SESSION["participantes"] = [];
+}
+
 
 $registro = [];
 $errores = [];
 
 
+// ==========================================
+// VERIFICAR ENVIO POST
+// ==========================================
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
 
     // ==========================================
     // RECIBIR DATOS
     // ==========================================
 
-    $nombre =
-        trim($_POST["nombre"] ?? "");
+    $nombre = trim($_POST["nombre"] ?? "");
 
-    $edad =
-        trim($_POST["edad"] ?? "");
+    $edad = trim($_POST["edad"] ?? "");
 
-    $correo =
-        trim($_POST["correo"] ?? "");
+    $correo = trim($_POST["correo"] ?? "");
 
-    $curso =
-        trim($_POST["curso"] ?? "");
+    $curso = trim($_POST["curso"] ?? "");
 
-    $modalidad =
-        trim($_POST["modalidad"] ?? "");
+    $modalidad = trim($_POST["modalidad"] ?? "");
 
-    $experiencia =
-        trim($_POST["experiencia"] ?? "");
+    $experiencia = trim($_POST["experiencia"] ?? "");
 
-    $horasExtras =
-        trim($_POST["horasExtras"] ?? "");
+    $horasExtras = trim($_POST["horasExtras"] ?? "");
+
 
 
     // ==========================================
-    // VALIDACIONES
+    // VALIDAR NOMBRE
     // ==========================================
 
     if (empty($nombre)) {
 
-        $errores[] =
-            "El nombre es obligatorio.";
+        $errores[] = "El nombre es obligatorio.";
     }
 
 
+
+    // ==========================================
+    // VALIDAR EDAD
+    // ==========================================
+
     if ($edad === "") {
 
-        $errores[] =
-            "La edad es obligatoria.";
+        $errores[] = "La edad es obligatoria.";
 
     } elseif (!is_numeric($edad)) {
 
-        $errores[] =
-            "La edad debe ser numerica.";
+        $errores[] = "La edad debe ser numerica.";
 
     } elseif ($edad < 16 || $edad > 60) {
 
@@ -64,10 +76,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
 
+
+    // ==========================================
+    // VALIDAR CORREO
+    // ==========================================
+
     if (empty($correo)) {
 
-        $errores[] =
-            "El correo es obligatorio.";
+        $errores[] = "El correo es obligatorio.";
 
     } elseif (
         !filter_var(
@@ -77,12 +93,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     ) {
 
         $errores[] =
-            "El correo no es valido.";
+            "El correo ingresado no es valido.";
     }
 
 
+
     // ==========================================
-    // VALIDAR QUE EL CURSO EXISTA
+    // VALIDAR CURSO
     // ==========================================
 
     if (empty($curso)) {
@@ -99,8 +116,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
 
+
     // ==========================================
-    // MODALIDAD
+    // VALIDAR MODALIDAD
     // ==========================================
 
     if (empty($modalidad)) {
@@ -116,12 +134,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     ) {
 
         $errores[] =
-            "La modalidad no es valida.";
+            "La modalidad seleccionada no es valida.";
     }
 
 
+
     // ==========================================
-    // EXPERIENCIA
+    // VALIDAR EXPERIENCIA
     // ==========================================
 
     if (empty($experiencia)) {
@@ -141,12 +160,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     ) {
 
         $errores[] =
-            "El nivel no es valido.";
+            "El nivel seleccionado no es valido.";
     }
 
 
+
     // ==========================================
-    // HORAS EXTRAS
+    // VALIDAR HORAS EXTRAS
     // ==========================================
 
     if ($horasExtras === "") {
@@ -169,22 +189,73 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
 
+
     // ==========================================
-    // SI TODO ESTA CORRECTO
+    // SI LAS VALIDACIONES BASICAS ESTAN BIEN
     // ==========================================
 
     if (empty($errores)) {
 
-        // Convertimos valores
+
+        // Convertir datos
         $edad = (int)$edad;
+
         $horasExtras = (int)$horasExtras;
 
 
+
         // ======================================
-        // OBTENER DATOS DEL CURSO
+        // OBTENER INFORMACION DEL CURSO
         // ======================================
 
         $cursoInfo = $cursos[$curso];
+
+
+
+        // ======================================
+        // CONTAR PARTICIPANTES DEL CURSO
+        // ======================================
+
+        $cantidadInscritos = 0;
+
+
+        foreach (
+            $_SESSION["participantes"]
+            as $participante
+        ) {
+
+            if (
+                $participante["cursoClave"]
+                === $curso
+            ) {
+
+                $cantidadInscritos++;
+            }
+        }
+
+
+
+        // ======================================
+        // VALIDAR CUPO
+        // ======================================
+
+        if (
+            $cantidadInscritos
+            >= $cursoInfo["cupo"]
+        ) {
+
+            $errores[] =
+                "El curso seleccionado ya no tiene cupos disponibles.";
+        }
+    }
+
+
+
+    // ==========================================
+    // SI TODAVIA NO EXISTEN ERRORES
+    // ==========================================
+
+    if (empty($errores)) {
 
 
         // ======================================
@@ -199,8 +270,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         );
 
 
+
         // ======================================
-        // CATEGORIA
+        // CALCULAR CATEGORIA
         // ======================================
 
         $categoria = match (true) {
@@ -222,6 +294,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         };
 
 
+
         // ======================================
         // CREAR REGISTRO
         // ======================================
@@ -234,6 +307,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             "correo" => $correo,
 
+
+            // Clave utilizada para comparar cupos
+            "cursoClave" => $curso,
+
+
+            // Datos reales del curso
             "curso" =>
                 $cursoInfo["nombre"],
 
@@ -242,6 +321,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             "area" =>
                 $cursoInfo["area"],
+
 
             "modalidad" =>
                 $modalidad,
@@ -252,8 +332,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             "categoria" =>
                 $categoria,
 
+
             "horasExtras" =>
                 $horasExtras,
+
 
             "precioCurso" =>
                 $pago["precioOriginal"],
@@ -276,6 +358,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             "total" =>
                 $pago["total"]
         ];
+
+
+
+        // ======================================
+        // GUARDAR EN SESION
+        // ======================================
+
+        $_SESSION["participantes"][] =
+            $registro;
     }
 }
 
@@ -301,16 +392,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <body>
 
+
     <h1>
         Resultado de Inscripcion
     </h1>
 
 
+
+    <!-- ==========================================
+         MOSTRAR ERRORES
+    =========================================== -->
+
     <?php if (!empty($errores)): ?>
+
 
         <h2>
             Errores encontrados
         </h2>
+
 
         <ul>
 
@@ -326,14 +425,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 
         <a href="index.php">
-            Volver
+            Volver al formulario
         </a>
 
 
+
+    <!-- ==========================================
+         SI TODO SALIO BIEN
+    =========================================== -->
+
     <?php elseif (!empty($registro)): ?>
 
+
         <h2>
-            Inscripcion correcta
+            Inscripcion realizada correctamente
         </h2>
 
 
@@ -354,11 +459,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <?php endforeach; ?>
 
 
+        <br>
+
+
         <a href="index.php">
             Nueva inscripcion
         </a>
 
+
     <?php endif; ?>
+
 
 </body>
 
