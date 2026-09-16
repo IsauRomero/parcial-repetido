@@ -7,7 +7,7 @@ require_once __DIR__ . "/funciones.php";
 
 
 // ==========================================
-// CREAR SESION DE PARTICIPANTES
+// CREAR LISTA DE PARTICIPANTES
 // ==========================================
 
 if (!isset($_SESSION["participantes"])) {
@@ -15,12 +15,11 @@ if (!isset($_SESSION["participantes"])) {
 }
 
 
-$registro = [];
 $errores = [];
 
 
 // ==========================================
-// VERIFICAR ENVIO POST
+// VERIFICAR POST
 // ==========================================
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -31,19 +30,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // ==========================================
 
     $nombre = trim($_POST["nombre"] ?? "");
-
     $edad = trim($_POST["edad"] ?? "");
-
     $correo = trim($_POST["correo"] ?? "");
-
     $curso = trim($_POST["curso"] ?? "");
-
     $modalidad = trim($_POST["modalidad"] ?? "");
-
     $experiencia = trim($_POST["experiencia"] ?? "");
-
     $horasExtras = trim($_POST["horasExtras"] ?? "");
-
 
 
     // ==========================================
@@ -51,10 +43,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // ==========================================
 
     if (empty($nombre)) {
-
         $errores[] = "El nombre es obligatorio.";
     }
-
 
 
     // ==========================================
@@ -76,7 +66,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
 
-
     // ==========================================
     // VALIDAR CORREO
     // ==========================================
@@ -92,10 +81,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         )
     ) {
 
-        $errores[] =
-            "El correo ingresado no es valido.";
+        $errores[] = "El correo no es valido.";
     }
-
 
 
     // ==========================================
@@ -116,7 +103,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
 
-
     // ==========================================
     // VALIDAR MODALIDAD
     // ==========================================
@@ -134,9 +120,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     ) {
 
         $errores[] =
-            "La modalidad seleccionada no es valida.";
+            "La modalidad no es valida.";
     }
-
 
 
     // ==========================================
@@ -160,9 +145,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     ) {
 
         $errores[] =
-            "El nivel seleccionado no es valido.";
+            "El nivel no es valido.";
     }
-
 
 
     // ==========================================
@@ -189,32 +173,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
 
-
     // ==========================================
-    // SI LAS VALIDACIONES BASICAS ESTAN BIEN
+    // OBTENER CURSO Y REVISAR CUPO
     // ==========================================
 
     if (empty($errores)) {
 
-
-        // Convertir datos
         $edad = (int)$edad;
-
         $horasExtras = (int)$horasExtras;
-
-
-
-        // ======================================
-        // OBTENER INFORMACION DEL CURSO
-        // ======================================
 
         $cursoInfo = $cursos[$curso];
 
-
-
-        // ======================================
-        // CONTAR PARTICIPANTES DEL CURSO
-        // ======================================
 
         $cantidadInscritos = 0;
 
@@ -234,25 +203,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
 
 
-
-        // ======================================
-        // VALIDAR CUPO
-        // ======================================
-
         if (
             $cantidadInscritos
             >= $cursoInfo["cupo"]
         ) {
 
             $errores[] =
-                "El curso seleccionado ya no tiene cupos disponibles.";
+                "El curso ya no tiene cupos disponibles.";
         }
     }
 
 
-
     // ==========================================
-    // SI TODAVIA NO EXISTEN ERRORES
+    // SI TODO ESTA CORRECTO
     // ==========================================
 
     if (empty($errores)) {
@@ -270,9 +233,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         );
 
 
-
         // ======================================
-        // CALCULAR CATEGORIA
+        // CATEGORIA
         // ======================================
 
         $categoria = match (true) {
@@ -294,7 +256,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         };
 
 
-
         // ======================================
         // CREAR REGISTRO
         // ======================================
@@ -307,12 +268,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             "correo" => $correo,
 
-
-            // Clave utilizada para comparar cupos
             "cursoClave" => $curso,
 
-
-            // Datos reales del curso
             "curso" =>
                 $cursoInfo["nombre"],
 
@@ -321,7 +278,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             "area" =>
                 $cursoInfo["area"],
-
 
             "modalidad" =>
                 $modalidad,
@@ -332,10 +288,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             "categoria" =>
                 $categoria,
 
-
             "horasExtras" =>
                 $horasExtras,
-
 
             "precioCurso" =>
                 $pago["precioOriginal"],
@@ -360,13 +314,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         ];
 
 
-
         // ======================================
-        // GUARDAR EN SESION
+        // GUARDAR TODOS LOS PARTICIPANTES
         // ======================================
 
         $_SESSION["participantes"][] =
             $registro;
+
+
+        // ======================================
+        // GUARDAR EL ULTIMO PARTICIPANTE
+        // ======================================
+
+        $_SESSION["ultimoParticipante"] =
+            $registro;
+
+
+        // ======================================
+        // REDIRECCIONAR
+        // ======================================
+
+        header(
+            "Location: comprobante.php"
+        );
+
+        exit;
     }
 }
 
@@ -385,31 +357,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     >
 
     <title>
-        Procesar Inscripcion
+        Errores de Inscripcion
     </title>
 
 </head>
 
 <body>
 
-
     <h1>
-        Resultado de Inscripcion
+        Errores de Inscripcion
     </h1>
 
 
-
-    <!-- ==========================================
-         MOSTRAR ERRORES
-    =========================================== -->
-
     <?php if (!empty($errores)): ?>
-
-
-        <h2>
-            Errores encontrados
-        </h2>
-
 
         <ul>
 
@@ -423,52 +383,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         </ul>
 
-
         <a href="index.php">
             Volver al formulario
         </a>
 
-
-
-    <!-- ==========================================
-         SI TODO SALIO BIEN
-    =========================================== -->
-
-    <?php elseif (!empty($registro)): ?>
-
-
-        <h2>
-            Inscripcion realizada correctamente
-        </h2>
-
-
-        <?php foreach ($registro as $key => $value): ?>
-
-            <p>
-
-                <strong>
-                    <?= htmlspecialchars($key) ?>:
-                </strong>
-
-                <?= htmlspecialchars(
-                    (string)$value
-                ) ?>
-
-            </p>
-
-        <?php endforeach; ?>
-
-
-        <br>
-
-
-        <a href="index.php">
-            Nueva inscripcion
-        </a>
-
-
     <?php endif; ?>
-
 
 </body>
 
